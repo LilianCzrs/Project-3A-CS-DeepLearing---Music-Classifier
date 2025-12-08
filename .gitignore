@@ -1,0 +1,26 @@
+# Environnement virtuel
+.venv/
+venv/
+__pycache__/
+
+# Données FMA / Mels / Gros fichiers
+data/fma_small/
+data/fma_medium/
+data/mels/
+data/*.zip
+data/*.mp3
+data/*.wav
+
+# Métadonnées lourdes éventuelles
+data/fma_metadata/
+
+# Checkpoints (modèles pytorch)
+checkpoints/*.pt
+
+# Fichiers d'OS
+.DS_Store
+
+# Cache Python
+*.pyc
+*.pyo
+*.pyd
