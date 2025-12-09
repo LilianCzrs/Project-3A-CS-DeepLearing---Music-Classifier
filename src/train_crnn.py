@@ -6,7 +6,7 @@ import torch
 from torch import nn, optim
 
 from src.dataset import get_dataloaders
-from src.models import BaselineCNN
+from src.models import CNNLSTM
 
 
 def get_device():
@@ -52,7 +52,6 @@ def train_one_epoch(model, loader, optimizer, criterion, device):
         running_acc += acc
         n_batches += 1
 
-        # debug : progression
         if (batch_idx + 1) % 20 == 0 or (batch_idx + 1) == len(loader):
             print(f"    batch {batch_idx+1}/{len(loader)}")
 
@@ -97,7 +96,7 @@ def main():
     # Hyperparamètres
     batch_size = 32
     num_workers = 0
-    num_epochs = 10          # tu peux ajuster
+    num_epochs = 10        # tu peux ajuster
     learning_rate = 1e-3
     n_mels = 128
     n_classes = 8
@@ -114,7 +113,7 @@ def main():
         num_workers=num_workers,
         pin_memory=(device.type == "cuda"),
         train_subset_size=None,      # ou 1000 si tu veux aller plus vite
-        augment_train=True,          # 🔥 activation de l'augmentation
+        augment_train=True,          # tu peux activer/désactiver SpecAugment ici
     )
 
     train_loader = loaders["train"]
@@ -128,7 +127,7 @@ def main():
     # ========================
     # 2. Modèle, loss, optim
     # ========================
-    model = BaselineCNN(n_mels=n_mels, n_classes=n_classes).to(device)
+    model = CNNLSTM(n_mels=n_mels, n_classes=n_classes).to(device)
     criterion = nn.CrossEntropyLoss()
     optimizer = optim.Adam(model.parameters(), lr=learning_rate)
 
@@ -143,9 +142,9 @@ def main():
     }
 
     best_valid_acc = 0.0
-    best_model_path = CHECKPOINT_DIR / "extended_cnn_best.pt"
+    best_model_path = CHECKPOINT_DIR / "crnn_best.pt"
 
-    print("Début de l'entraînement (extended / augmentation)...")
+    print("Début de l'entraînement (CRNN : CNN + LSTM)...")
     start_time = time()
 
     for epoch in range(1, num_epochs + 1):
@@ -172,7 +171,6 @@ def main():
         )
         print(f"  Temps epoch : {epoch_time:.1f} s")
 
-        # Sauvegarde du meilleur modèle basé sur l'accuracy validation
         if valid_acc > best_valid_acc:
             best_valid_acc = valid_acc
             torch.save(
@@ -187,21 +185,21 @@ def main():
             )
             print(f"  👉 Nouveau meilleur modèle sauvegardé ({best_valid_acc:.2f}%)")
 
-        # sauvegarde de l'historique à chaque epoch (au cas où ça s'arrête avant la fin)
-        history_path = CHECKPOINT_DIR / "extended_cnn_history.json"
+        # sauvegarde de l'historique à chaque epoch
+        history_path = CHECKPOINT_DIR / "crnn_history.json"
         with open(history_path, "w", encoding="utf-8") as f:
             json.dump(history, f, indent=2)
 
     total_time = time() - start_time
     print(f"\nEntraînement terminé en {total_time/60:.1f} minutes.")
-    print(f"Meilleure validation accuracy (extended) : {best_valid_acc:.2f}%")
+    print(f"Meilleure validation accuracy (CRNN) : {best_valid_acc:.2f}%")
 
-    print("\nÉvaluation sur le test set (extended)...")
+    print("\nÉvaluation sur le test set (CRNN)...")
     checkpoint = torch.load(best_model_path, map_location=device)
     model.load_state_dict(checkpoint["model_state_dict"])
 
     test_loss, test_acc = evaluate(model, test_loader, criterion, device)
-    print(f"Test (extended) - loss: {test_loss:.4f}, acc: {test_acc:.2f}%")
+    print(f"Test (CRNN) - loss: {test_loss:.4f}, acc: {test_acc:.2f}%")
 
 
 if __name__ == "__main__":
